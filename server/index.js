@@ -21,6 +21,8 @@ app.use(express.json());
 
 // API routes
 import transactionsRouter from "./routes/transactions.js";
+import authRouter from "./routes/auth.js";
+import usersRouter from "./routes/users.js";
 
 // Attach io to req for real-time events in controllers
 app.use((req, res, next) => {
@@ -29,6 +31,8 @@ app.use((req, res, next) => {
 });
 
 app.use("/api/transactions", transactionsRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
 
 // Placeholder route
 app.get("/", (req, res) => {
@@ -38,6 +42,11 @@ app.get("/", (req, res) => {
 // Socket.IO connection
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id);
+
+  socket.on("user:typing", (data) => {
+    socket.broadcast.emit("user:typing", data);
+  });
+
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id);
   });
