@@ -8,9 +8,30 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
   const [typingUser, setTypingUser] = useState(null);
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    setSocket(io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"));
+    // Auto-login: fetch user if JWT exists
+    const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
+    if (jwt) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${jwt}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.email) setUser(data);
+        })
+        .catch(() => setUser(null));
+    }
+    // Persistent socket connection with reconnection logic
+    const s = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", {
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
+    setSocket(s);
+    return () => s.disconnect();
   }, []);
 
   useEffect(() => {
@@ -23,18 +44,39 @@ export default function Home() {
       setTypingUser(user || "Someone");
       setTimeout(() => setTypingUser(null), 2000);
     });
+    socket.on("disconnect", () => {
+      setError("Lost connection to server. Attempting to reconnect...");
+    });
+    socket.on("connect", () => {
+      setError("");
+    });
     return () => {
       socket.off("new_transaction");
       socket.off("user:typing");
+      socket.off("disconnect");
+      socket.off("connect");
     };
     // eslint-disable-next-line
   }, [socket]);
 
-  const fetchTxs = async () => {
+  const fetchTxs = async function fetchTxs() {
     setLoading(true);
-    const res = await axios.get((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/transactions");
-    setTransactions(res.data);
-    setLoading(false);
+    try {
+      const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/transactions`, {
+        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
+      });
+      if (!res.ok) throw new Error("Failed to fetch transactions");
+      const data = await res.json();
+      // If user is logged in, filter transactions by user (if backend supports it)
+      setTransactions(Array.isArray(data) ? data : []);
+      setError("");
+    } catch (e) {
+      setTransactions([]);
+      setError(e.message || "Failed to fetch transactions");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
