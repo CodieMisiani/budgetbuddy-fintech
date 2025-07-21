@@ -1,29 +1,57 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { io } from "socket.io-client";
+import Header from "../components/Header";
+import Toast from "../components/Toast";
+import TransactionForm from "../components/TransactionForm";
+import TransactionList from "../components/TransactionList";
+
+const sampleTransactions = [
+  {
+    id: '1',
+    description: 'Received Ksh 50000 salary payment',
+    amount: 50000,
+    category: 'Salary',
+    vendor: 'Employer',
+    type: 'income',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+  },
+  {
+    id: '2',
+    description: 'Spent Ksh 1200 at Naivas',
+    amount: 1200,
+    category: 'Groceries',
+    vendor: 'Naivas',
+    type: 'expense',
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+  },
+];
 
 export default function Home() {
   const [transactions, setTransactions] = useState([]);
-  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
   const [typingUser, setTypingUser] = useState(null);
   const [user, setUser] = useState(null);
-  const [error, setError] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "success" });
 
   useEffect(() => {
     // Auto-login: fetch user if JWT exists
     const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
-    if (jwt) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${jwt}` }
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.email) setUser(data);
-        })
-        .catch(() => setUser(null));
+    if (!jwt) {
+      window.location.href = "/login";
+      return;
     }
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${jwt}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.email) setUser(data);
+        else window.location.href = "/login";
+      })
+      .catch(() => window.location.href = "/login");
     // Persistent socket connection with reconnection logic
     const s = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", {
       reconnection: true,
@@ -45,10 +73,10 @@ export default function Home() {
       setTimeout(() => setTypingUser(null), 2000);
     });
     socket.on("disconnect", () => {
-      setError("Lost connection to server. Attempting to reconnect...");
+      setToast({ message: "Lost connection to server. Attempting to reconnect...", type: "error" });
     });
     socket.on("connect", () => {
-      setError("");
+      setToast({ message: "Connected to server", type: "success" });
     });
     return () => {
       socket.off("new_transaction");
@@ -68,69 +96,35 @@ export default function Home() {
       });
       if (!res.ok) throw new Error("Failed to fetch transactions");
       const data = await res.json();
-      // If user is logged in, filter transactions by user (if backend supports it)
-      setTransactions(Array.isArray(data) ? data : []);
-      setError("");
+      setTransactions(Array.isArray(data) && data.length ? data : sampleTransactions);
     } catch (e) {
-      setTransactions([]);
-      setError(e.message || "Failed to fetch transactions");
+      setTransactions(sampleTransactions);
+      setToast({ message: e.message || "Failed to fetch transactions", type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    // Very basic parse: expects 'Spent Ksh <amount> at <vendor>'
-    const match = input.match(/spent\s*ksh\s*(\d+)\s*at\s*(.+)/i);
-    let amount = 0, vendor = '', description = input, date = new Date().toISOString().slice(0,10);
-    if (match) {
-      amount = parseInt(match[1], 10);
-      vendor = match[2];
-      description = input;
-    }
-    await axios.post((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/transactions", {
-      amount,
-      date,
-      description,
-      vendor
-    });
-    setInput("");
-  };
+  function handleLogout() {
+    localStorage.removeItem("jwt");
+    window.location.href = "/login";
+  }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mb-2">BudgetBuddy</h1>
-      <p className="mb-6 text-gray-600">BudgetBuddy helps you stay on top of your expenses in real-time with a smart AI-powered assistant.</p>
-      <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-        <input
-          value={input}
-          onChange={e => {
-            setInput(e.target.value);
-            if (socket) socket.emit("user:typing", { user: "Someone" });
-          }}
-          placeholder="e.g. Spent Ksh 500 at Naivas"
-          className="p-2 border rounded w-72"
-        />
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Add</button>
-      </form>
-      {typingUser && <div className="mb-2 text-sm text-blue-600">{typingUser} is typing...</div>}
-      <div className="w-full max-w-xl">
-        {loading ? <div>Loading...</div> : (
-          <ul>
-            {transactions.map(tx => (
-              <li key={tx._id} className="bg-white p-4 mb-2 rounded shadow flex justify-between items-center">
-                <div>
-                  <div className="font-medium">{tx.description}</div>
-                  <div className="text-xs text-gray-500">{tx.category} | {tx.vendor} | {tx.amount ? `Ksh ${tx.amount}` : ''}</div>
-                </div>
-                <div className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleString()}</div>
-              </li>
-            ))}
-          </ul>
-        )}
+    <>
+      <Header user={user} onLogout={handleLogout} />
+      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, message: "" })} />
+      <div className="min-h-screen bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 flex flex-col items-center p-6 animate-fade-in">
+        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+          <div className="col-span-1">
+            <TransactionForm onAdd={tx => setTransactions([tx, ...transactions])} jwt={typeof window !== "undefined" ? localStorage.getItem("jwt") : null} showToast={(msg, type) => setToast({ message: msg, type })} />
+            {typingUser && <div className="mb-2 text-sm text-blue-100">{typingUser} is typing...</div>}
+          </div>
+          <div className="col-span-2">
+            {loading ? <div className="text-white">Loading...</div> : <TransactionList transactions={transactions} />}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
