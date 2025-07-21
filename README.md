@@ -10,6 +10,17 @@ BudgetBuddy is an AI-powered personal finance MVP that helps you track your inco
 - **CI/CD:** GitHub Actions
 - **Deployment:** Vercel (frontend), Render/Railway (backend)
 
+---
+
+## 🏷️ Branches & Features
+
+- `main`: Stable, production-ready codebase.
+- `feature/validation`: Joi validation for transactions.
+- `test/backend-api`: Automated Jest/Supertest API tests.
+- `feature/admin-ui`: Admin dashboard for user management.
+- `feature/live-typing`: Real-time typing indicator with Socket.IO.
+- `feature/premium`: Monetization scaffold, `/pricing` page, premium flag.
+
 ## ✅ MVP Features
 - User can input income and expenses
 - Real-time updates of transactions
@@ -92,29 +103,18 @@ These controllers are used by the `/api/transactions` route to process API reque
   - Response: `{ success: true, deleted: <transaction object> }`. Emits a real-time `transaction:deleted` event.
 
 ---
-🛡️ Transaction Validation
-All POST and PUT requests to /api/transactions are validated using Joi. If validation fails, the API responds with 400 Bad Request and a helpful error message.
 
-Validation Rules:
+## 🛡️ Transaction Validation
 
-amount: number, required, must be >= 0
-date
-: string, required, ISO date format (e.g. 2025-07-21)
-description: string, required, at least 1 character
-vendor: string, optional
-Example Error Response:
+All POST and PUT requests to `/api/transactions` are validated using Joi. If validation fails, the API responds with `400 Bad Request` and a helpful error message.
 
-json
-{
-  "error": "\"amount\" is required"
-}
-## 🔄 Real-Time API (Socket.IO)
+**Validation Rules:**
+- `amount`: number, required, must be >= 0
+- `date`: string, required, ISO date format (e.g. `2025-07-21`)
+- `description`: string, required, at least 1 character
+- `vendor`: string, optional
 
-The backend emits real-time events using Socket.IO. Connect your frontend to receive updates instantly when transactions are created, updated, or deleted.
-
-### Events
-
-- **`transaction:new`**
+**Example Error Response:**
   - Emitted when a new transaction is created via the API.
   - Payload: The created transaction object
 
