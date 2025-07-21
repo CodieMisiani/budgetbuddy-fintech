@@ -19,6 +19,17 @@ const io = new Server(server, {
 app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:3000" }));
 app.use(express.json());
 
+// API routes
+import transactionsRouter from "./routes/transactions.js";
+
+// Attach io to req for real-time events in controllers
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+app.use("/api/transactions", transactionsRouter);
+
 // Placeholder route
 app.get("/", (req, res) => {
   res.send("BudgetBuddy backend is running 🚀");

@@ -14,7 +14,10 @@ export async function createTransaction(req, res) {
       category,
     });
     await transaction.save();
-    // Emit real-time event if io/socket is available (to be added in route/index)
+    // Emit real-time event if io/socket is available
+    if (req.io) {
+      req.io.emit("transaction:new", transaction);
+    }
     res.status(201).json(transaction);
   } catch (err) {
     res.status(400).json({ error: err.message });
