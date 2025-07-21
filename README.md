@@ -47,6 +47,112 @@ See the model definition in `/server/models/transaction.js` for details.
 
 ---
 
+## 🚀 New Features & UI Polish (2025-07-21)
+
+### ✨ Modern UI & UX
+- **Header:** Gradient, glassmorphism, logo, mobile nav, login/logout/profile/admin buttons
+- **Design System:** All colors, gradients, and animations in `client/index.css` for consistent branding
+- **Smart Transaction Form:** AI-powered, Kenyan context, spinner, toast, beautiful card
+- **Transaction List:** Card layout, badges, relative time, sample/demo data, mobile-friendly
+- **Toast Notifications:** For all feedback (success/error)
+- **404 Page:** Custom not found experience
+- **Mobile Responsive:** All screens tested on mobile
+
+### 🔒 Authentication & Protected Routes
+- **Login & Signup:** Beautiful forms, validation, toast feedback
+- **JWT Auth:** Secure, persistent login with auto-login
+- **Profile Page:** View user info and premium status
+- **Admin Dashboard:** List users, see roles, premium status
+- **Protected Routes:** `/`, `/profile`, `/admin` require auth (auto-redirect to `/login`)
+- **Role-based Access:** Admin-only dashboard and analytics
+
+### 🧠 AI Categorization
+- **Kenyan Vendor AI:** Naivas→Groceries, Uber→Transport, KFC→Dining, etc.
+- **Income/Expense Detection:** Based on input text
+- **Relative Timestamps:** "2 hours ago" display
+
+### 🧪 Testing
+- **Backend:** Jest + Supertest for all API endpoints
+- **Frontend:** Manual and automated UI/UX checks
+
+---
+
+## 🌍 Deployment Guide (Step-by-Step)
+
+### 1. **Create a Free MongoDB Atlas Cluster**
+- Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas/register)
+- Create a free cluster, user, and get your connection string
+
+### 2. **Deploy Backend to Render.com**
+- Push your code to GitHub (main branch up to date)
+- Go to [Render.com](https://render.com/) → New Web Service → Connect your repo
+- Root Directory: `server`
+- Build Command: `npm install`
+- Start Command: `node index.js`
+- **Environment Variables:**
+  - `MONGO_URI` = your Atlas string
+  - `JWT_SECRET` = your secret
+  - `CLIENT_URL` = your Vercel frontend URL
+- Deploy and copy your backend URL (e.g., `https://budgetbuddy-backend.onrender.com`)
+
+### 3. **Deploy Frontend to Vercel**
+- Go to [Vercel.com](https://vercel.com/) → Import your repo
+- Root Directory: `client`
+- **Environment Variable:**
+  - `NEXT_PUBLIC_API_URL` = your Render backend URL
+- Deploy and copy your frontend URL
+
+### 4. **Test Live Links**
+- Visit your frontend URL and test all features (login, signup, dashboard, admin, profile, real-time)
+
+### 5. **Update README with Live Links**
+- Add your deployed URLs here:
+  - **Frontend:** [your-frontend-url]
+  - **Backend:** [your-backend-url]
+
+---
+
+## 📝 Sample Data Structure
+```js
+const sampleTransactions = [
+  {
+    id: '1',
+    description: 'Received Ksh 50000 salary payment',
+    amount: 50000,
+    category: 'Salary',
+    vendor: 'Employer',
+    type: 'income',
+    timestamp: '2025-07-21T21:00:00.000Z',
+  },
+  // ...more Kenyan-context transactions
+];
+```
+
+---
+
+## 🛡️ Security & Best Practices
+- All secrets in `.env` files (never commit to git)
+- JWT-based auth, bcrypt password hashing
+- CORS configured for production
+- Admin-only routes protected
+- MongoDB Atlas for production data
+
+---
+
+## 💡 Want to Contribute?
+- Fork, branch, and submit a PR!
+- See `/client/index.css` for design system
+- See `/server/routes` for API endpoints
+
+---
+
+## 👏 Credits
+- Built by CodieMisiani & contributors
+- UI/UX inspired by the best Kenyan fintech apps
+- AI categorization rules by Windsurf AI
+
+---
+
 ## 🧩 Backend Controllers
 
 ### Transaction Controller (`/server/controllers/transactionController.js`)
