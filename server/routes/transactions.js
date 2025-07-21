@@ -1,5 +1,6 @@
 import express from "express";
 import { createTransaction, getTransactions, updateTransaction, deleteTransaction } from "../controllers/transactionController.js";
+import { validateTransaction } from "../middleware/validateTransaction.js";
 
 const router = express.Router();
 
@@ -9,11 +10,11 @@ router.get("/", getTransactions);
 
 // @route   POST /api/transactions
 // @desc    Create a new transaction
-router.post("/", createTransaction);
+router.post("/", validateTransaction, createTransaction);
 
 // @route   PUT /api/transactions/:id
 // @desc    Update a transaction
-router.put("/:id", updateTransaction);
+router.put("/:id", validateTransaction, updateTransaction);
 
 // @route   DELETE /api/transactions/:id
 // @desc    Delete a transaction
