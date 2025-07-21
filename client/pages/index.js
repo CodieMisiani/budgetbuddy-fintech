@@ -7,6 +7,7 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
+  const [typingUser, setTypingUser] = useState(null);
 
   useEffect(() => {
     setSocket(io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"));
@@ -18,7 +19,14 @@ export default function Home() {
     socket.on("new_transaction", (tx) => {
       setTransactions((prev) => [tx, ...prev]);
     });
-    return () => socket.off("new_transaction");
+    socket.on("user:typing", ({ user }) => {
+      setTypingUser(user || "Someone");
+      setTimeout(() => setTypingUser(null), 2000);
+    });
+    return () => {
+      socket.off("new_transaction");
+      socket.off("user:typing");
+    };
     // eslint-disable-next-line
   }, [socket]);
 
@@ -56,12 +64,16 @@ export default function Home() {
       <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
         <input
           value={input}
-          onChange={e => setInput(e.target.value)}
+          onChange={e => {
+            setInput(e.target.value);
+            if (socket) socket.emit("user:typing", { user: "Someone" });
+          }}
           placeholder="e.g. Spent Ksh 500 at Naivas"
           className="p-2 border rounded w-72"
         />
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Add</button>
       </form>
+      {typingUser && <div className="mb-2 text-sm text-blue-600">{typingUser} is typing...</div>}
       <div className="w-full max-w-xl">
         {loading ? <div>Loading...</div> : (
           <ul>
