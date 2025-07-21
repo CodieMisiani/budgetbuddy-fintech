@@ -32,7 +32,20 @@ export default function Home() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
-    await axios.post((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/transactions", { text: input });
+    // Very basic parse: expects 'Spent Ksh <amount> at <vendor>'
+    const match = input.match(/spent\s*ksh\s*(\d+)\s*at\s*(.+)/i);
+    let amount = 0, vendor = '', description = input, date = new Date().toISOString().slice(0,10);
+    if (match) {
+      amount = parseInt(match[1], 10);
+      vendor = match[2];
+      description = input;
+    }
+    await axios.post((process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api/transactions", {
+      amount,
+      date,
+      description,
+      vendor
+    });
     setInput("");
   };
 
@@ -55,7 +68,7 @@ export default function Home() {
             {transactions.map(tx => (
               <li key={tx._id} className="bg-white p-4 mb-2 rounded shadow flex justify-between items-center">
                 <div>
-                  <div className="font-medium">{tx.text}</div>
+                  <div className="font-medium">{tx.description}</div>
                   <div className="text-xs text-gray-500">{tx.category} | {tx.vendor} | {tx.amount ? `Ksh ${tx.amount}` : ''}</div>
                 </div>
                 <div className="text-xs text-gray-400">{new Date(tx.createdAt).toLocaleString()}</div>

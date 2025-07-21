@@ -75,6 +75,73 @@ These controllers are used by the `/api/transactions` route to process API reque
     ```
   - Response: The created transaction object with auto-categorized `category` field.
 
+- **PUT `/api/transactions/:id`**
+  - Updates an existing transaction by ID. Expects JSON body (fields to update):
+    ```json
+    {
+      "amount": Number,
+      "date": "YYYY-MM-DD",
+      "description": "string",
+      "vendor": "string"
+    }
+    ```
+  - Response: The updated transaction object. Emits a real-time `transaction:updated` event.
+
+- **DELETE `/api/transactions/:id`**
+  - Deletes a transaction by ID.
+  - Response: `{ success: true, deleted: <transaction object> }`. Emits a real-time `transaction:deleted` event.
+
+---
+🛡️ Transaction Validation
+All POST and PUT requests to /api/transactions are validated using Joi. If validation fails, the API responds with 400 Bad Request and a helpful error message.
+
+Validation Rules:
+
+amount: number, required, must be >= 0
+date
+: string, required, ISO date format (e.g. 2025-07-21)
+description: string, required, at least 1 character
+vendor: string, optional
+Example Error Response:
+
+json
+{
+  "error": "\"amount\" is required"
+}
+## 🔄 Real-Time API (Socket.IO)
+
+The backend emits real-time events using Socket.IO. Connect your frontend to receive updates instantly when transactions are created, updated, or deleted.
+
+### Events
+
+- **`transaction:new`**
+  - Emitted when a new transaction is created via the API.
+  - Payload: The created transaction object
+
+- **`transaction:updated`**
+  - Emitted when a transaction is updated via the API.
+  - Payload: The updated transaction object
+
+- **`transaction:deleted`**
+  - Emitted when a transaction is deleted via the API.
+  - Payload: The deleted transaction object
+
+#### Example Usage (JavaScript)
+```js
+import { io } from "socket.io-client";
+const socket = io("http://localhost:5000");
+
+socket.on("transaction:new", (tx) => {
+  // Handle new transaction
+});
+socket.on("transaction:updated", (tx) => {
+  // Handle updated transaction
+});
+socket.on("transaction:deleted", (tx) => {
+  // Handle deleted transaction
+});
+```
+
 ---
 
 ## 🔄 Real-Time API (Socket.IO)
