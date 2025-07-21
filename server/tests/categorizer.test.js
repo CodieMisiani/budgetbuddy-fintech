@@ -1,4 +1,4 @@
-const { categorize } = require('../utils/categorizer');
+import { categorize } from "../utils/categorizer.js";
 
 describe('categorize', () => {
   it('detects groceries', () => {

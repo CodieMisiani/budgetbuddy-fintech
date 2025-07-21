@@ -1,5 +1,5 @@
 import Transaction from "../models/transaction.js";
-import categorize from "../utils/categorizer.js";
+import { categorize } from "../utils/categorizer.js";
 
 // Create a new transaction
 export async function createTransaction(req, res) {
