@@ -14,18 +14,89 @@ export default function Home() {
   const [socket, setSocket] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "success" });
 
+  // Handle client-side redirects
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
+  // Initialize Socket.IO only on client side
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const s = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", {
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+    });
+    setSocket(s);
+    
+    return () => {
+      if (s) s.disconnect();
+    };
+  }, []);
+
+  // Fetch transactions when socket is ready
+  useEffect(() => {
+    if (!socket) return;
+    
+    const fetchTxs = async () => {
+      try {
+        setTransactionsLoading(true);
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        if (!token) return;
+        
+        const res = await fetch('/api/transactions', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setTransactions(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+        setToast({
+          message: 'Failed to load transactions. Please try again.',
+          type: 'error'
+        });
+      } finally {
+        setTransactionsLoading(false);
+      }
+    };
+    
+    fetchTxs();
+    
+    // Set up socket listeners
+    const handleNewTransaction = (tx) => {
+      setTransactions((prev) =>
+        prev.find((t) => t._id === tx._id) ? prev : [tx, ...prev]
+      );
+    };
+    
+    socket.on('transaction', handleNewTransaction);
+    
+    return () => {
+      if (socket) {
+        socket.off('transaction', handleNewTransaction);
+      }
+    };
+  }, [socket]);
+
+  // Show loading state on server or while checking auth
+  if (typeof window === 'undefined' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        Loading...
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  // Redirect to login if not authenticated
+  if (!user) {
+    router.push('/login');
+    return null;
   }
 
   useEffect(() => {
