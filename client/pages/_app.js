@@ -1,10 +1,12 @@
 import "../styles/globals.css";
-import { AuthProvider } from "../context/AuthContext";
+import { jsx as _jsx, jsxs as _jsxs } from 'react/jsx-runtime'
+import { AuthProvider } from '../context/AuthContext'
 
-export default function App({ Component, pageProps }) {
-  return (
-    <AuthProvider>
-      <Component {...pageProps} />
-    </AuthProvider>
-  );
+function MyApp({ Component, pageProps }) {
+  return _jsx(AuthProvider, {
+    children: _jsx(Component, { ...pageProps })
+  })
 }
+
+export default MyApp
+
