@@ -1,43 +1,67 @@
+import { useAuth } from "../../context/AuthContext";
 import { useEffect, useState } from "react";
-import Toast from "../../components/Toast";
+import { useRouter } from "next/navigation";
 
-export default function Admin() {
+export default function AdminPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [users, setUsers] = useState([]);
-  const [toast, setToast] = useState({ message: "", type: "success" });
+  const [error, setError] = useState("");
+
   useEffect(() => {
-    const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
+    if (!loading && (!user || user.role !== "admin")) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (!user) return; // Don't fetch if user is not yet loaded
+    const jwt =
+      typeof window !== "undefined" ? localStorage.getItem("token") : null;
     if (!jwt) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/admin/users`, {
-      headers: { Authorization: `Bearer ${jwt}` }
-    })
-      .then(res => res.json())
-      .then(data => setUsers(data))
-      .catch(() => setToast({ message: "Failed to load users", type: "error" }));
-  }, []);
+    fetch(
+      `${
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+      }/api/admin/users`,
+      {
+        headers: { Authorization: `Bearer ${jwt}` },
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load users");
+        return res.json();
+      })
+      .then((data) => setUsers(data))
+      .catch((err) => setError(err.message));
+  }, [user]);
+
+  if (loading || !user || user.role !== "admin") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400">
-      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, message: "" })} />
-      <div className="bg-white/80 rounded-lg shadow-lg p-8 mt-12 w-full max-w-2xl animate-fade-in">
-        <h2 className="text-2xl font-bold mb-4 text-center">Admin Dashboard</h2>
-        <table className="w-full text-left">
-          <thead>
-            <tr>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Premium</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(u => (
-              <tr key={u._id} className="border-b">
-                <td>{u.email}</td>
-                <td>{u.role}</td>
-                <td>{u.premium ? '✅' : '❌'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      {error && <div className="text-red-500 mb-4">{error}</div>}
+      <div className="bg-white p-6 rounded shadow">
+        <h2 className="text-xl font-semibold mb-4">Users</h2>
+        <ul className="divide-y divide-gray-200">
+          {users.map((u) => (
+            <li key={u._id} className="py-4 flex justify-between items-center">
+              <div>
+                <p className="font-medium">{u.email}</p>
+                <p className="text-sm text-gray-500">Role: {u.role}</p>
+              </div>
+              <p className="text-sm text-gray-500">
+                Joined: {new Date(u.createdAt).toLocaleDateString()}
+              </p>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

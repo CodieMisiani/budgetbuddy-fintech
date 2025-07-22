@@ -1,62 +1,38 @@
+import { useAuth } from "../context/AuthContext";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { io } from "socket.io-client";
-import Header from "../components/Header";
-import Toast from "../components/Toast";
 import TransactionForm from "../components/TransactionForm";
 import TransactionList from "../components/TransactionList";
-
-const sampleTransactions = [
-  {
-    id: '1',
-    description: 'Received Ksh 50000 salary payment',
-    amount: 50000,
-    category: 'Salary',
-    vendor: 'Employer',
-    type: 'income',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-  },
-  {
-    id: '2',
-    description: 'Spent Ksh 1200 at Naivas',
-    amount: 1200,
-    category: 'Groceries',
-    vendor: 'Naivas',
-    type: 'expense',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-  },
-];
+import Toast from "../components/Toast"; // Keep for transaction feedback
 
 export default function Home() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [socket, setSocket] = useState(null);
-  const [typingUser, setTypingUser] = useState(null);
-  const [user, setUser] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "success" });
 
   useEffect(() => {
-    // Auto-login: fetch user if JWT exists
-    const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
-    if (!jwt) {
-      window.location.href = "/login";
-      return;
+    if (!loading && !user) {
+      router.push("/login");
     }
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${jwt}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.email) setUser(data);
-        else window.location.href = "/login";
-      })
-      .catch(() => window.location.href = "/login");
-    // Persistent socket connection with reconnection logic
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  useEffect(() => {
     const s = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", {
       reconnection: true,
       reconnectionAttempts: 10,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
     });
     setSocket(s);
     return () => s.disconnect();
@@ -65,66 +41,109 @@ export default function Home() {
   useEffect(() => {
     if (!socket) return;
     fetchTxs();
-    socket.on("new_transaction", (tx) => {
-      setTransactions((prev) => [tx, ...prev]);
-    });
-    socket.on("user:typing", ({ user }) => {
-      setTypingUser(user || "Someone");
-      setTimeout(() => setTypingUser(null), 2000);
-    });
+
+    const handleNewTransaction = (tx) => {
+      setTransactions((prev) =>
+        prev.find((t) => t._id === tx._id) ? prev : [tx, ...prev]
+      );
+    };
+
+    const handleUpdateTransaction = (updatedTx) => {
+      setTransactions((prev) =>
+        prev.map((tx) => (tx._id === updatedTx._id ? updatedTx : tx))
+      );
+    };
+
+    const handleDeleteTransaction = (deletedTx) => {
+      setTransactions((prev) => prev.filter((tx) => tx._id !== deletedTx._id));
+    };
+
+    socket.on("transaction:new", handleNewTransaction);
+    socket.on("transaction:updated", handleUpdateTransaction);
+    socket.on("transaction:deleted", handleDeleteTransaction);
+
     socket.on("disconnect", () => {
-      setToast({ message: "Lost connection to server. Attempting to reconnect...", type: "error" });
+      setToast({
+        message: "Lost connection to server. Attempting to reconnect...",
+        type: "error",
+      });
     });
     socket.on("connect", () => {
       setToast({ message: "Connected to server", type: "success" });
     });
+
     return () => {
-      socket.off("new_transaction");
-      socket.off("user:typing");
+      socket.off("transaction:new", handleNewTransaction);
+      socket.off("transaction:updated", handleUpdateTransaction);
+      socket.off("transaction:deleted", handleDeleteTransaction);
       socket.off("disconnect");
       socket.off("connect");
     };
-    // eslint-disable-next-line
   }, [socket]);
 
-  const fetchTxs = async function fetchTxs() {
-    setLoading(true);
+  const fetchTxs = async () => {
+    setTransactionsLoading(true);
     try {
-      const jwt = typeof window !== "undefined" ? localStorage.getItem("jwt") : null;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/transactions`, {
-        headers: jwt ? { Authorization: `Bearer ${jwt}` } : {}
-      });
+      const jwt =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const res = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+        }/api/transactions`,
+        {
+          headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
+        }
+      );
       if (!res.ok) throw new Error("Failed to fetch transactions");
       const data = await res.json();
-      setTransactions(Array.isArray(data) && data.length ? data : sampleTransactions);
+      setTransactions(data);
     } catch (e) {
-      setTransactions(sampleTransactions);
-      setToast({ message: e.message || "Failed to fetch transactions", type: "error" });
+      setToast({ message: e.message, type: "error" });
     } finally {
-      setLoading(false);
+      setTransactionsLoading(false);
     }
   };
 
-  function handleLogout() {
-    localStorage.removeItem("jwt");
-    window.location.href = "/login";
-  }
-
   return (
-    <>
-      <Header user={user} onLogout={handleLogout} />
-      <Toast message={toast.message} type={toast.type} onClose={() => setToast({ ...toast, message: "" })} />
-      <div className="min-h-screen bg-gradient-to-r from-blue-800 via-blue-600 to-blue-400 flex flex-col items-center p-6 animate-fade-in">
-        <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ ...toast, message: "" })}
+      />
+      <div className="container mx-auto p-4 md:p-8">
+        <header className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <div className="text-right">
+            <p className="text-lg">Welcome, {user.username || user.email}</p>
+            <p className="text-sm text-gray-400">Manage your finances</p>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="col-span-1">
-            <TransactionForm onAdd={tx => setTransactions([tx, ...transactions])} jwt={typeof window !== "undefined" ? localStorage.getItem("jwt") : null} showToast={(msg, type) => setToast({ message: msg, type })} />
-            {typingUser && <div className="mb-2 text-sm text-blue-100">{typingUser} is typing...</div>}
+            <TransactionForm
+              jwt={
+                typeof window !== "undefined"
+                  ? localStorage.getItem("token")
+                  : null
+              }
+              onAdd={(newTx) => {
+                setTransactions((prev) => [newTx, ...prev]);
+                setToast({ message: "Transaction added!", type: "success" });
+              }}
+              showToast={(message, type) => setToast({ message, type })}
+            />
           </div>
           <div className="col-span-2">
-            {loading ? <div className="text-white">Loading...</div> : <TransactionList transactions={transactions} />}
+            {transactionsLoading ? (
+              <div className="text-white">Loading transactions...</div>
+            ) : (
+              <TransactionList transactions={transactions} />
+            )}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -4,6 +4,7 @@ import { Server } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
+import logger from "./utils/logger.js";
 
 dotenv.config();
 
@@ -12,14 +13,16 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 });
 
-app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
-  credentials: true // allow cookies/JWT if needed
-}));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    credentials: true, // allow cookies/JWT if needed
+  })
+);
 app.use(express.json());
 
 // API routes
@@ -44,28 +47,32 @@ app.get("/", (req, res) => {
 
 // Socket.IO connection
 io.on("connection", (socket) => {
-  console.log("Socket connected:", socket.id);
+  logger.info("Socket connected:", socket.id);
 
   socket.on("user:typing", (data) => {
     socket.broadcast.emit("user:typing", data);
   });
 
   socket.on("disconnect", () => {
-    console.log("Socket disconnected:", socket.id);
+    logger.info("Socket disconnected:", socket.id);
   });
 });
 
 // MongoDB connection and server start
 if (process.env.NODE_ENV !== "test") {
   const PORT = process.env.PORT || 5000;
-  mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  mongoose
+    .connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
     .then(() => {
       server.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+        logger.info(`Server running on port ${PORT}`);
       });
     })
     .catch((err) => {
-      console.error("MongoDB connection error:", err);
+      logger.error("MongoDB connection error:", err);
     });
 }
 
