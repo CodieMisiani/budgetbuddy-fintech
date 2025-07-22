@@ -2,7 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: "standalone",
-};
+  output: 'standalone',
+  experimental: {
+    esmExternals: true
+  }
+}
 
-export default nextConfig;
+export default nextConfig
