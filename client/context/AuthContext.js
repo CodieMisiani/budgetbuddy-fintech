@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
         if (token) {
           const res = await fetch('/api/auth/auth', {
             method: 'GET',
-            headers: { 'Authorization': Bearer  }
+            headers: { 'Authorization': `Bearer ${token}` }
           });
           if (res.ok) {
             const userData = await res.json();

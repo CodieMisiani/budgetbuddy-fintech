@@ -6,3 +6,22 @@ body {
   background: #f3f4f6;
   font-family: system-ui, sans-serif;
 }
+/* Password input styles */
+input[type="password"],
+input[type="text"] {
+  @apply pr-10;
+}
+
+.password-toggle-btn {
+  @apply absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700;
+}
+
+/* Focus styles */
+input:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-opacity-50;
+}
+
+/* Error state */
+input.error {
+  @apply border-red-500 focus:ring-red-500 focus:border-red-500;
+}

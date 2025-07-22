@@ -1,36 +1,58 @@
-﻿export default function handler(req, res) {
-  if (req.method === 'POST') {      
-    // This is a mock implementation - replace with your actual auth logic 
-    const { email, password } = req.body;
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
-    // Mock user data - replace with actual database check
-    if (email === 'test@example.com' && password === 'password') {
-      return res.status(200).json({ 
-        token: 'mock-jwt-token',    
-        user: {
-          id: 1,
-          email: 'test@example.com',
-          name: 'Test User'
-        }
+export default async function handler(req, res) {
+  try {
+    if (req.method === 'POST') {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      // Make API call to your backend authentication endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return res.status(response.status).json(error);
+      }
+
+      const data = await response.json();
+      return res.status(200).json(data);
     }
 
-    return res.status(401).json({ message: 'Invalid credentials' });       
-  }
-  
-  if (req.method === 'GET') {       
-    // Mock user data for the /me endpoint
-    const token = req.headers.authorization?.split(' ')[1];
-    if (token === 'mock-jwt-token') {
-      return res.status(200).json({ 
-        id: 1,
-        email: 'test@example.com',  
-        name: 'Test User'
-      });
-    }
-    return res.status(401).json({ message: 'Unauthorized' });
-  }
+    if (req.method === 'GET') {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'No token provided' });
+      }
 
-  res.setHeader('Allow', ['GET', 'POST']);
-  res.status(405).end(Method  Not Allowed);
+      const token = authHeader.split(' ')[1];
+      
+      // Make API call to your backend verification endpoint
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify`, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        return res.status(response.status).json(error);
+      }
+
+      const data = await response.json();
+      return res.status(200).json(data);
+    }
+
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).json({ message: 'Method not allowed' });
+  } catch (error) {
+    console.error('Auth error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 }
