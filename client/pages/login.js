@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useAuth } from "../context/AuthContext";
-import PasswordInput from "../components/PasswordInput";
+import { useAuth } from "../src/context/AuthContext";
+import PasswordInput from "../src/components/PasswordInput";
 
 const Login = () => {
   const [email, setEmail] = useState("");

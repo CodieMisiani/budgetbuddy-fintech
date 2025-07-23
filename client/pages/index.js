@@ -1,10 +1,10 @@
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../src/context/AuthContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { io } from "socket.io-client";
-import TransactionForm from "../components/TransactionForm";
-import TransactionList from "../components/TransactionList";
-import Toast from "../components/Toast"; // Keep for transaction feedback
+import TransactionForm from "../src/components/TransactionForm";
+import TransactionList from "../src/components/TransactionList";
+import Toast from "../src/components/Toast"; // Keep for transaction feedback
 
 export default function Home() {
   const { user, loading } = useAuth();

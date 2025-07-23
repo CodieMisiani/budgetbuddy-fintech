@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../src/context/AuthContext";
 
 export default function Dashboard() {
   const { user, loading, logout } = useAuth();
