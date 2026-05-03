@@ -1,6 +1,6 @@
 # BudgetBuddy
 
-BudgetBuddy is an AI-powered personal finance MVP that helps you track your income and expenses in real-time, categorize transactions, and visualize your spending habits.
+BudgetBuddy is an AI-powered personal finance MVP that helps you track your income and expenses in real-time, categorize transactions, and visualize your spending habits...
 
 ## 🛠 Tech Stack
 - **Frontend:** Next.js + Tailwind CSS
